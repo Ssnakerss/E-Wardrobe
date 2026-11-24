@@ -1,0 +1,996 @@
+openapi: 3.0.3
+info:
+  title: Wardrobe API
+  version: 0.1.0
+  description: >-
+    Baseline API. Prices are integer major currency units encoded as strings.
+    Sync payload structures are additionally specified in docs/sync.md.
+servers:
+  - url: https://wardrobe.example.com
+tags:
+  - name: Health
+  - name: Auth
+  - name: Categories
+  - name: Items
+  - name: Photos
+  - name: Sync
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Process is alive
+  /health/ready:
+    get:
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Database and required dependencies are ready
+        '503':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/auth/invitations/validate:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invitation_token]
+              properties:
+                invitation_token:
+                  type: string
+                  minLength: 20
+      responses:
+        '200':
+          description: Invitation is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    format: email
+                    nullable: true
+                  expires_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/Error'
+        '410':
+          description: Invitation is expired, revoked, or already used
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invitation_token, email, password, client]
+              properties:
+                invitation_token:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 12
+                  maxLength: 128
+                client:
+                  $ref: '#/components/schemas/ClientType'
+                device_name:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Registered and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, client]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                client:
+                  $ref: '#/components/schemas/ClientType'
+                device_name:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      responses:
+        '204':
+          description: Session revoked
+        '401':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/auth/csrf:
+    get:
+      tags: [Auth]
+      responses:
+        '200':
+          description: CSRF token for cookie-authenticated web requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [csrf_token]
+                properties:
+                  csrf_token:
+                    type: string
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/categories:
+    get:
+      tags: [Categories]
+      responses:
+        '200':
+          description: Flat list; clients construct the tree using parent_id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+    post:
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '422':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryPatch'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '409':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Categories]
+      parameters:
+        - name: base_version
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Soft-deleted
+        '409':
+          $ref: '#/components/responses/Error'
+        '422':
+          description: Category is in use or has children
+
+  /api/v1/items:
+    get:
+      tags: [Items]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: include_descendants
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ItemStatus'
+        - name: season
+          in: query
+          schema:
+            $ref: '#/components/schemas/Season'
+        - name: condition_rating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: preference_rating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: archived
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [created_desc, updated_desc, name_asc, purchase_year_desc]
+            default: updated_desc
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Item page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Item'
+                  next_cursor:
+                    type: string
+                    nullable: true
+    post:
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '422':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+    get:
+      tags: [Items]
+      responses:
+        '200':
+          description: Item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemPatch'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '409':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Items]
+      parameters:
+        - name: base_version
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Soft-deleted
+        '409':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/items/{itemId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+    post:
+      tags: [Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [base_version, archived]
+              properties:
+                base_version:
+                  type: integer
+                  format: int64
+                archived:
+                  type: boolean
+      responses:
+        '200':
+          description: Archive state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  /api/v1/storage-locations:
+    get:
+      tags: [Items]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+            default: 10
+      responses:
+        '200':
+          description: Suggestions belonging to the current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+
+  /api/v1/items/{itemId}/photos:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+    post:
+      tags: [Photos]
+      description: Direct multipart upload for the online web client
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sort_order:
+                  type: integer
+                  minimum: 0
+      responses:
+        '201':
+          description: Photo is ready or processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+
+  /api/v1/items/{itemId}/photos/{photoId}/content:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+      - $ref: '#/components/parameters/PhotoId'
+    put:
+      tags: [Photos]
+      description: Idempotent mobile content upload after photo metadata sync
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Already uploaded or successfully processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+        '413':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/photos/{photoId}/content:
+    parameters:
+      - $ref: '#/components/parameters/PhotoId'
+    get:
+      tags: [Photos]
+      parameters:
+        - name: variant
+          in: query
+          schema:
+            type: string
+            enum: [thumbnail, original]
+            default: original
+      responses:
+        '200':
+          description: Authorized image content
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/photos/{photoId}:
+    parameters:
+      - $ref: '#/components/parameters/PhotoId'
+    delete:
+      tags: [Photos]
+      parameters:
+        - name: base_version
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Photo soft-deleted
+
+  /api/v1/sync/push:
+    post:
+      tags: [Sync]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushRequest'
+      responses:
+        '200':
+          description: Independent mutation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPushResponse'
+        '401':
+          $ref: '#/components/responses/Error'
+
+  /api/v1/sync/pull:
+    get:
+      tags: [Sync]
+      parameters:
+        - name: since
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 200
+      responses:
+        '200':
+          description: Ordered change page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPullResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: wardrobe_session
+  parameters:
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PhotoId:
+      name: photoId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ClientType:
+      type: string
+      enum: [web, mobile]
+    User:
+      type: object
+      required: [id, email, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [active, disabled]
+    AuthResponse:
+      type: object
+      required: [user, expires_at]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        expires_at:
+          type: string
+          format: date-time
+        session_token:
+          type: string
+          description: Returned only for mobile client
+        csrf_token:
+          type: string
+          description: Returned only for web client
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+    ItemStatus:
+      type: string
+      enum: [in_use, stored, needs_repair]
+    Season:
+      type: string
+      enum: [winter, spring, summer, autumn, demi_season, all_season]
+    CategoryFields:
+      type: object
+      properties:
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sort_order:
+          type: integer
+          minimum: 0
+    CategoryInput:
+      allOf:
+        - $ref: '#/components/schemas/CategoryFields'
+        - type: object
+          required: [name]
+    CategoryPatch:
+      type: object
+      required: [base_version]
+      properties:
+        base_version:
+          type: integer
+          format: int64
+          minimum: 1
+        fields:
+          $ref: '#/components/schemas/CategoryFields'
+    Category:
+      allOf:
+        - $ref: '#/components/schemas/CategoryFields'
+        - type: object
+          required: [id, name, version, created_at, updated_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            template_key:
+              type: string
+              nullable: true
+            version:
+              type: integer
+              format: int64
+            archived_at:
+              type: string
+              format: date-time
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    ItemFields:
+      type: object
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        brand:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        purchase_year:
+          type: integer
+          nullable: true
+        purchase_price:
+          type: string
+          pattern: '^(0|[1-9][0-9]*)\$'
+          nullable: true
+          description: Integer major currency units, for example 12990 RUB
+        price_currency:
+          type: string
+          pattern: '^[A-Z]{3}\$'
+          nullable: true
+        purchase_place:
+          type: string
+          nullable: true
+        condition_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        preference_rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        last_worn_on:
+          type: string
+          format: date
+          nullable: true
+        storage_location:
+          type: string
+          nullable: true
+        season:
+          $ref: '#/components/schemas/Season'
+        color:
+          type: string
+          nullable: true
+        size:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ItemStatus'
+    ItemInput:
+      allOf:
+        - $ref: '#/components/schemas/ItemFields'
+        - type: object
+          required: [category_id, name]
+    ItemPatch:
+      type: object
+      required: [base_version, fields]
+      properties:
+        base_version:
+          type: integer
+          format: int64
+          minimum: 1
+        fields:
+          $ref: '#/components/schemas/ItemFields'
+    Item:
+      allOf:
+        - $ref: '#/components/schemas/ItemFields'
+        - type: object
+          required: [id, category_id, name, status, version, created_at, updated_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            version:
+              type: integer
+              format: int64
+            archived_at:
+              type: string
+              format: date-time
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            photos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Photo'
+    Photo:
+      type: object
+      required: [id, item_id, sort_order, status, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        sort_order:
+          type: integer
+        status:
+          type: string
+          enum: [awaiting_upload, processing, ready, failed]
+        mime_type:
+          type: string
+          nullable: true
+        size_bytes:
+          type: integer
+          format: int64
+          nullable: true
+        width:
+          type: integer
+          nullable: true
+        height:
+          type: integer
+          nullable: true
+        version:
+          type: integer
+          format: int64
+    SyncMutation:
+      type: object
+      required: [mutation_id, entity, entity_id, operation, base_version]
+      properties:
+        mutation_id:
+          type: string
+          format: uuid
+        entity:
+          type: string
+          enum: [category, item, photo]
+        entity_id:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum: [create, update, delete]
+        base_version:
+          type: integer
+          format: int64
+          minimum: 0
+        payload:
+          type: object
+          additionalProperties: true
+    SyncPushRequest:
+      type: object
+      required: [installation_id, mutations]
+      properties:
+        installation_id:
+          type: string
+          format: uuid
+        mutations:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/SyncMutation'
+    SyncMutationResult:
+      type: object
+      required: [mutation_id, status]
+      properties:
+        mutation_id:
+          type: string
+          format: uuid
+        entity:
+          type: string
+          enum: [category, item, photo]
+        entity_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - applied
+            - duplicate
+            - conflict
+            - validation_error
+            - dependency_missing
+            - mutation_id_reused
+        entity_version:
+          type: integer
+          format: int64
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+        current:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: >-
+            Current server snapshot and version for conflict resolution.
+            Required for conflict responses when the entity still exists.
+    SyncPushResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncMutationResult'
+    SyncChange:
+      type: object
+      required:
+        - seq
+        - entity
+        - entity_id
+        - operation
+        - entity_version
+        - payload
+        - changed_at
+      properties:
+        seq:
+          type: integer
+          format: int64
+          minimum: 1
+        entity:
+          type: string
+          enum: [category, item, photo]
+        entity_id:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum: [upsert, delete]
+        entity_version:
+          type: integer
+          format: int64
+          minimum: 1
+        payload:
+          type: object
+          additionalProperties: true
+          description: Full entity snapshot or deletion tombstone
+        changed_at:
+          type: string
+          format: date-time
+    SyncPullResponse:
+      type: object
+      required: [changes, next_since, has_more]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncChange'
+        next_since:
+          type: integer
+          format: int64
+          minimum: 0
+        has_more:
+          type: boolean
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
