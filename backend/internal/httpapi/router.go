@@ -1,16 +1,37 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/Ssnakerss/E-Wardrobe/internal/categories"
+	"github.com/Ssnakerss/E-Wardrobe/internal/changejournal"
+	"github.com/Ssnakerss/E-Wardrobe/internal/items"
+	"github.com/Ssnakerss/E-Wardrobe/internal/photos"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/database"
+	"github.com/Ssnakerss/E-Wardrobe/internal/platform/storage"
+	"github.com/Ssnakerss/E-Wardrobe/internal/sync"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// RouterConfig holds dependencies for the HTTP router.
+type RouterConfig struct {
+	Pool      *database.Pool
+	Store     storage.PhotoStorage
+	TmpDir    string
+	Journal   *changejournal.Writer
+	CatSvc    *categories.Service
+	CatRepo   *categories.Repository
+	ItemSvc   *items.Service
+	PhotoSvc  *photos.Service
+	PhotoRepo *photos.Repository
+}
+
 // NewRouter creates and configures the HTTP router.
-func NewRouter(pool *database.Pool) http.Handler {
+func NewRouter(cfg RouterConfig) http.Handler {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -36,37 +57,34 @@ func NewRouter(pool *database.Pool) http.Handler {
 	r.Post("/api/v1/auth/recovery/validate", recoveryValidate)
 	r.Post("/api/v1/auth/recovery/complete", recoveryComplete)
 
+	// Create sync service
+	syncRepo := sync.NewRepository(cfg.Pool)
+	syncSvc := sync.NewService(cfg.Pool, syncRepo, cfg.Journal, cfg.CatSvc, cfg.ItemSvc, cfg.PhotoSvc)
+
 	// Protected endpoints (require auth)
 	r.Group(func(r chi.Router) {
 		r.Use(func(next http.Handler) http.Handler {
-			return authMiddleware(pool, next)
+			return authMiddleware(cfg.Pool, next)
 		})
 
-		// Categories
+		// Categories (placeholder)
 		r.Get("/api/v1/categories", listCategories)
 		r.Post("/api/v1/categories", createCategory)
 		r.Patch("/api/v1/categories/{categoryId}", updateCategory)
 		r.Delete("/api/v1/categories/{categoryId}", deleteCategory)
 
 		// Items
-		r.Get("/api/v1/items", listItems)
-		r.Post("/api/v1/items", createItem)
-		r.Get("/api/v1/items/{itemId}", getItem)
-		r.Patch("/api/v1/items/{itemId}", updateItem)
-		r.Delete("/api/v1/items/{itemId}", deleteItem)
-		r.Post("/api/v1/items/{itemId}/archive", archiveItem)
-		r.Get("/api/v1/storage-locations", storageLocations)
+		itemHandler := newItemHandler(cfg.ItemSvc, cfg.Pool)
+		itemHandler.registerRoutes(r)
 
 		// Photos
-		r.Post("/api/v1/items/{itemId}/photos", createPhoto)
-		r.Put("/api/v1/items/{itemId}/photos/{photoId}/content", uploadPhotoContent)
-		r.Get("/api/v1/photos/{photoId}/content", getPhotoContent)
-		r.Delete("/api/v1/photos/{photoId}", deletePhoto)
-		r.Put("/api/v1/items/{itemId}/photos/order", updatePhotoOrder)
+		photoPipeline := photos.NewUploadPipeline(cfg.PhotoRepo, cfg.Store, cfg.Journal, cfg.Pool)
+		photoHandler := newPhotoHandler(cfg.PhotoSvc, photoPipeline, cfg.Pool)
+		photoHandler.registerPhotoRoutes(r)
 
 		// Sync
-		r.Post("/api/v1/sync/push", syncPush)
-		r.Get("/api/v1/sync/pull", syncPull)
+		r.Post("/api/v1/sync/push", syncPushHandler(syncSvc))
+		r.Get("/api/v1/sync/pull", syncPullHandler(syncSvc))
 	})
 
 	return r
@@ -180,14 +198,61 @@ func updatePhotoOrder(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, map[string]any{"message": "placeholder"})
 }
 
-func syncPush(w http.ResponseWriter, r *http.Request) {
-	RespondJSON(w, http.StatusOK, map[string]any{"results": []any{}})
+// syncPushHandler returns an HTTP handler for sync push.
+func syncPushHandler(svc *sync.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := GetUserIDFromContext(r)
+
+		var req sync.PushRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			WriteError(w, BadRequest("invalid request body"))
+			return
+		}
+
+		result, err := svc.Push(r.Context(), userID, req)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+
+		RespondJSON(w, http.StatusOK, result)
+	}
 }
 
-func syncPull(w http.ResponseWriter, r *http.Request) {
-	RespondJSON(w, http.StatusOK, map[string]any{
-		"changes":   []any{},
-		"next_since": int64(0),
-		"has_more":  false,
-	})
+// syncPullHandler returns an HTTP handler for sync pull.
+func syncPullHandler(svc *sync.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := GetUserIDFromContext(r)
+
+		sinceStr := r.URL.Query().Get("since")
+		limitStr := r.URL.Query().Get("limit")
+
+		since := int64(0)
+		if sinceStr != "" {
+			val, err := strconv.ParseInt(sinceStr, 10, 64)
+			if err != nil {
+				WriteError(w, BadRequest("invalid since parameter"))
+				return
+			}
+			since = val
+		}
+
+		limit := int32(200)
+		if limitStr != "" {
+			val, err := strconv.ParseInt(limitStr, 10, 32)
+			if err != nil {
+				WriteError(w, BadRequest("invalid limit parameter"))
+				return
+			}
+			limit = int32(val)
+		}
+
+		result, err := svc.Pull(r.Context(), userID, since, limit)
+		if err != nil {
+			WriteError(w, err)
+			return
+		}
+
+		RespondJSON(w, http.StatusOK, result)
+	}
 }
