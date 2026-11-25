@@ -505,6 +505,11 @@ func NewFromTx(tx database.Tx) *Queries {
 	return &Queries{db: tx}
 }
 
+// NewFromExecutor creates a new Queries instance from an executor.
+func NewFromExecutor(exec database.Executor) *Queries {
+	return &Queries{db: exec}
+}
+
 // ExecContext executes a raw SQL query.
 func (q *Queries) ExecContext(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
 	return q.db.ExecContext(ctx, query, args...)

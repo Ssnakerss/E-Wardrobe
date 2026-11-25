@@ -83,3 +83,8 @@ func getUserIDFromContext(r *http.Request) uuid.UUID {
 	userID, _ := r.Context().Value(UserIDKey).(uuid.UUID)
 	return userID
 }
+
+// GetUserIDFromContext is the exported version of getUserIDFromContext.
+func GetUserIDFromContext(r *http.Request) uuid.UUID {
+	return getUserIDFromContext(r)
+}

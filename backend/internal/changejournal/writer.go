@@ -33,8 +33,8 @@ func NewWriter(db *database.Pool) *Writer {
 }
 
 // WriteRecord writes a single change record within an existing transaction.
-func (w *Writer) WriteRecord(ctx context.Context, tx database.Tx, change Change) error {
-	q := sqlc.NewFromTx(tx)
+func (w *Writer) WriteRecord(ctx context.Context, exec database.Executor, change Change) error {
+	q := sqlc.NewFromExecutor(exec)
 
 	// Allocate next seq
 	seq, err := q.NextSeq(ctx, change.UserID)

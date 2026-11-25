@@ -21,7 +21,7 @@ func NewService(repo *Repository, journal *changejournal.Writer) *Service {
 }
 
 // Create creates a new category.
-func (s *Service) Create(ctx context.Context, tx database.Tx, userID uuid.UUID, input CategoryInput) (Category, error) {
+func (s *Service) Create(ctx context.Context, exec database.Executor, userID uuid.UUID, input CategoryInput) (Category, error) {
 	cat := Category{
 		ID:        uuid.New(),
 		UserID:    userID,
@@ -31,13 +31,12 @@ func (s *Service) Create(ctx context.Context, tx database.Tx, userID uuid.UUID, 
 		Version:   1,
 	}
 
-	cat, err := s.repo.Create(ctx, tx, cat)
+	cat, err := s.repo.Create(ctx, exec, cat)
 	if err != nil {
 		return cat, fmt.Errorf("create category: %w", err)
 	}
 
-	// Write to change journal
-	err = s.journal.WriteRecord(ctx, tx, changejournal.Change{
+	err = s.journal.WriteRecord(ctx, exec, changejournal.Change{
 		UserID:        userID,
 		Entity:        "category",
 		EntityID:      cat.ID,
@@ -53,26 +52,24 @@ func (s *Service) Create(ctx context.Context, tx database.Tx, userID uuid.UUID, 
 }
 
 // GetByID returns a category by ID.
-func (s *Service) GetByID(ctx context.Context, tx database.Tx, id, userID uuid.UUID) (Category, error) {
-	return s.repo.GetByID(ctx, tx, id, userID)
+func (s *Service) GetByID(ctx context.Context, exec database.Executor, id, userID uuid.UUID) (Category, error) {
+	return s.repo.GetByID(ctx, exec, id, userID)
 }
 
 // List returns all categories for a user.
-func (s *Service) List(ctx context.Context, tx database.Tx, userID uuid.UUID) ([]Category, error) {
-	return s.repo.List(ctx, tx, userID)
+func (s *Service) List(ctx context.Context, exec database.Executor, userID uuid.UUID) ([]Category, error) {
+	return s.repo.List(ctx, exec, userID)
 }
 
 // Update updates a category.
-func (s *Service) Update(ctx context.Context, tx database.Tx, userID uuid.UUID, patch CategoryPatch) (Category, error) {
-	// Verify ownership
-	existing, err := s.repo.GetByID(ctx, tx, patch.ID, userID)
+func (s *Service) Update(ctx context.Context, exec database.Executor, userID uuid.UUID, patch CategoryPatch) (Category, error) {
+	existing, err := s.repo.GetByID(ctx, exec, patch.ID, userID)
 	if err != nil {
 		return existing, fmt.Errorf("category not found or not owned: %w", err)
 	}
 
-	// Check cycle if parent is changing
 	if patch.ParentID != nil && existing.ParentID != nil && *patch.ParentID != *existing.ParentID {
-		isCycle, err := s.repo.CheckCycle(ctx, tx, patch.ID, *patch.ParentID)
+		isCycle, err := s.repo.CheckCycle(ctx, exec, patch.ID, *patch.ParentID)
 		if err != nil {
 			return existing, fmt.Errorf("check cycle: %w", err)
 		}
@@ -81,13 +78,12 @@ func (s *Service) Update(ctx context.Context, tx database.Tx, userID uuid.UUID, 
 		}
 	}
 
-	cat, err := s.repo.Update(ctx, tx, patch)
+	cat, err := s.repo.Update(ctx, exec, patch)
 	if err != nil {
 		return cat, fmt.Errorf("update category: %w", err)
 	}
 
-	// Write to change journal
-	err = s.journal.WriteRecord(ctx, tx, changejournal.Change{
+	err = s.journal.WriteRecord(ctx, exec, changejournal.Change{
 		UserID:        userID,
 		Entity:        "category",
 		EntityID:      cat.ID,
@@ -103,15 +99,13 @@ func (s *Service) Update(ctx context.Context, tx database.Tx, userID uuid.UUID, 
 }
 
 // SoftDelete deletes a category.
-func (s *Service) SoftDelete(ctx context.Context, tx database.Tx, id, userID uuid.UUID, version int64) error {
-	// Verify ownership
-	_, err := s.repo.GetByID(ctx, tx, id, userID)
+func (s *Service) SoftDelete(ctx context.Context, exec database.Executor, id, userID uuid.UUID, version int64) error {
+	_, err := s.repo.GetByID(ctx, exec, id, userID)
 	if err != nil {
 		return fmt.Errorf("category not found or not owned: %w", err)
 	}
 
-	// Check if category is in use
-	itemsCount, err := s.repo.CountItemsInCategory(ctx, tx, id, userID)
+	itemsCount, err := s.repo.CountItemsInCategory(ctx, exec, id, userID)
 	if err != nil {
 		return fmt.Errorf("count items: %w", err)
 	}
@@ -119,8 +113,7 @@ func (s *Service) SoftDelete(ctx context.Context, tx database.Tx, id, userID uui
 		return fmt.Errorf("cannot delete category with active items")
 	}
 
-	// Check for child categories
-	childrenCount, err := s.repo.CountChildCategories(ctx, tx, id, userID)
+	childrenCount, err := s.repo.CountChildCategories(ctx, exec, id, userID)
 	if err != nil {
 		return fmt.Errorf("count children: %w", err)
 	}
@@ -128,14 +121,12 @@ func (s *Service) SoftDelete(ctx context.Context, tx database.Tx, id, userID uui
 		return fmt.Errorf("cannot delete category with child categories")
 	}
 
-	// Soft delete
-	err = s.repo.SoftDelete(ctx, tx, id, userID, version)
+	err = s.repo.SoftDelete(ctx, exec, id, userID, version)
 	if err != nil {
 		return fmt.Errorf("soft delete: %w", err)
 	}
 
-	// Write tombstone to journal
-	err = s.journal.WriteRecord(ctx, tx, changejournal.Change{
+	err = s.journal.WriteRecord(ctx, exec, changejournal.Change{
 		UserID:        userID,
 		Entity:        "category",
 		EntityID:      id,

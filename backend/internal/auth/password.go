@@ -62,16 +62,18 @@ func parseHash(hash string) ([]byte, []byte, error) {
 		for i := 0; i < len(remaining); i++ {
 			if remaining[i] == '$' {
 				idx = i
+				break
 			}
 		}
 		if idx == -1 {
+			parts = append(parts, remaining)
 			break
 		}
 		parts = append(parts, remaining[:idx])
 		remaining = remaining[idx+1:]
 	}
 
-	if len(parts) < 5 {
+	if len(parts) < 6 {
 		return nil, nil, errInvalidHash
 	}
 

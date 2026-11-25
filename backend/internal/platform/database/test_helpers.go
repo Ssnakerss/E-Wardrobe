@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
@@ -63,7 +64,7 @@ func SetupTestDB(t *testing.T) *TestDB {
 	t.Cleanup(func() { _ = db.Close() })
 
 	require.NoError(t, goose.SetDialect("postgres"))
-	require.NoError(t, goose.Up(db, "../../migrations"))
+	require.NoError(t, goose.Up(db, "../../../../migrations"))
 
 	tDB := &TestDB{
 		Container: container,
@@ -94,5 +95,5 @@ func (tDB *TestDB) ResetDB(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	require.NoError(t, goose.Up(db, "../../migrations"))
+	require.NoError(t, goose.Up(db, "../../../../migrations"))
 }

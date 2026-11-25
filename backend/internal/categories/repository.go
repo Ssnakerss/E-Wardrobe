@@ -22,8 +22,8 @@ func NewRepository(pool *database.Pool) *Repository {
 }
 
 // Create inserts a new category.
-func (r *Repository) Create(ctx context.Context, tx database.Tx, cat Category) (Category, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) Create(ctx context.Context, exec database.Executor, cat Category) (Category, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	var parentIDSQL *uuid.UUID
 	if cat.ParentID != nil {
@@ -52,8 +52,8 @@ func (r *Repository) Create(ctx context.Context, tx database.Tx, cat Category) (
 }
 
 // GetByID returns a category by ID.
-func (r *Repository) GetByID(ctx context.Context, tx database.Tx, id, userID uuid.UUID) (Category, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) GetByID(ctx context.Context, exec database.Executor, id, userID uuid.UUID) (Category, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	c, err := q.GetCategory(ctx, sqlc.GetCategoryParams{
 		ID:     id,
@@ -67,8 +67,8 @@ func (r *Repository) GetByID(ctx context.Context, tx database.Tx, id, userID uui
 }
 
 // List returns all categories for a user.
-func (r *Repository) List(ctx context.Context, tx database.Tx, userID uuid.UUID) ([]Category, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) List(ctx context.Context, exec database.Executor, userID uuid.UUID) ([]Category, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	cats, err := q.ListCategories(ctx, userID)
 	if err != nil {
@@ -84,8 +84,8 @@ func (r *Repository) List(ctx context.Context, tx database.Tx, userID uuid.UUID)
 }
 
 // Update updates a category.
-func (r *Repository) Update(ctx context.Context, tx database.Tx, patch CategoryPatch) (Category, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) Update(ctx context.Context, exec database.Executor, patch CategoryPatch) (Category, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	var parentIDSQL *uuid.UUID
 	if patch.ParentID != nil {
@@ -120,8 +120,8 @@ func (r *Repository) Update(ctx context.Context, tx database.Tx, patch CategoryP
 }
 
 // SoftDelete marks a category as deleted.
-func (r *Repository) SoftDelete(ctx context.Context, tx database.Tx, id, userID uuid.UUID, version int64) error {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) SoftDelete(ctx context.Context, exec database.Executor, id, userID uuid.UUID, version int64) error {
+	q := sqlc.NewFromExecutor(exec)
 
 	_, err := q.SoftDeleteCategory(ctx, sqlc.SoftDeleteCategoryParams{
 		ID:      id,
@@ -136,8 +136,8 @@ func (r *Repository) SoftDelete(ctx context.Context, tx database.Tx, id, userID 
 }
 
 // CheckCycle checks if moving a category would create a cycle.
-func (r *Repository) CheckCycle(ctx context.Context, tx database.Tx, categoryID, parentID uuid.UUID) (bool, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) CheckCycle(ctx context.Context, exec database.Executor, categoryID, parentID uuid.UUID) (bool, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	return q.CheckCategoryCycle(ctx, sqlc.CheckCategoryCycleParams{
 		ID:     categoryID,
@@ -146,8 +146,8 @@ func (r *Repository) CheckCycle(ctx context.Context, tx database.Tx, categoryID,
 }
 
 // CountItemsInCategory returns the number of active items in a category.
-func (r *Repository) CountItemsInCategory(ctx context.Context, tx database.Tx, categoryID, userID uuid.UUID) (int64, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) CountItemsInCategory(ctx context.Context, exec database.Executor, categoryID, userID uuid.UUID) (int64, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	count, err := q.CountItemsInCategory(ctx, sqlc.CountItemsInCategoryParams{
 		CategoryID: categoryID,
@@ -161,8 +161,8 @@ func (r *Repository) CountItemsInCategory(ctx context.Context, tx database.Tx, c
 }
 
 // CountChildCategories returns the number of active child categories.
-func (r *Repository) CountChildCategories(ctx context.Context, tx database.Tx, parentID, userID uuid.UUID) (int64, error) {
-	q := sqlc.NewFromTx(tx)
+func (r *Repository) CountChildCategories(ctx context.Context, exec database.Executor, parentID, userID uuid.UUID) (int64, error) {
+	q := sqlc.NewFromExecutor(exec)
 
 	count, err := q.CountChildCategories(ctx, sqlc.CountChildCategoriesParams{
 		ParentID: parentID,

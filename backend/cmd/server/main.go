@@ -9,9 +9,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Ssnakerss/E-Wardrobe/internal/categories"
+	"github.com/Ssnakerss/E-Wardrobe/internal/changejournal"
 	"github.com/Ssnakerss/E-Wardrobe/internal/config"
 	"github.com/Ssnakerss/E-Wardrobe/internal/httpapi"
+	"github.com/Ssnakerss/E-Wardrobe/internal/items"
+	"github.com/Ssnakerss/E-Wardrobe/internal/photos"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/database"
+	"github.com/Ssnakerss/E-Wardrobe/internal/platform/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -46,6 +51,37 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Initialize storage
+	store, err := storage.NewLocalPhotoStorage(cfg.PhotoStorageDir)
+	if err != nil {
+		slog.Error("failed to create photo storage", "error", err)
+		os.Exit(1)
+	}
+
+	// Initialize repositories
+	catRepo := categories.NewRepository(pool)
+	itemRepo := items.NewRepository(pool)
+	photoRepo := photos.NewRepository(pool)
+
+	// Initialize change journal
+	journal := changejournal.NewWriter(pool)
+
+	// Initialize services
+	itemSvc := items.NewService(itemRepo, catRepo, journal)
+	photoSvc := photos.NewService(photoRepo, store, journal, cfg.PhotoStorageDir)
+
+	// Build router config
+	routerCfg := httpapi.RouterConfig{
+		Pool:      pool,
+		Store:     store,
+		TmpDir:    cfg.PhotoStorageDir,
+		Journal:   journal,
+		ItemSvc:   itemSvc,
+		PhotoSvc:  photoSvc,
+		PhotoRepo: photoRepo,
+	}
+
+	// Main router
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -74,8 +110,8 @@ func main() {
 		w.Write([]byte("Ready"))
 	})
 
-	// API router with auth middleware
-	apiRouter := httpapi.NewRouter(pool)
+	// API router
+	apiRouter := httpapi.NewRouter(routerCfg)
 	r.Mount("/", apiRouter)
 
 	srv := &http.Server{
