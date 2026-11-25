@@ -176,6 +176,62 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
 
+  /api/v1/auth/recovery/validate:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recovery_token]
+              properties:
+                recovery_token:
+                  type: string
+      responses:
+        '200':
+          description: Recovery token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user_id]
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+        '410':
+          $ref: '#/components/responses/Error'
+          description: Token is expired, used, or invalid
+
+  /api/v1/auth/recovery/complete:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recovery_token, new_password]
+              properties:
+                recovery_token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 12
+                  maxLength: 128
+      responses:
+        '200':
+          description: Password updated, all sessions revoked
+        '400':
+          $ref: '#/components/responses/Error'
+        '410':
+          $ref: '#/components/responses/Error'
+
   /api/v1/categories:
     get:
       tags: [Categories]
@@ -533,6 +589,40 @@ paths:
       responses:
         '204':
           description: Photo soft-deleted
+
+  /api/v1/items/{itemId}/photos/order:
+    parameters:
+      - $ref: '#/components/parameters/ItemId'
+    put:
+      tags: [Photos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photos]
+              properties:
+                photos:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [id, sort_order]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      sort_order:
+                        type: integer
+                        minimum: 0
+      responses:
+        '200':
+          description: Photo order updated
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
 
   /api/v1/sync/push:
     post:

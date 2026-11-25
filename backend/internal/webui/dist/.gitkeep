@@ -1,0 +1,2 @@
+// This file is a placeholder. The web UI dist/ will be populated by the web build step.
+// The embed directive in embed.go requires at least one file.
