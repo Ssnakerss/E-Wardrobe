@@ -10,12 +10,16 @@ import { createConfirmDialog } from '../components/confirm-dialog.js';
 import { createConflictDialog } from '../components/conflict-dialog.js';
 import { formatPrice } from '../domain/item.js';
 import { createToast } from '../components/toast.js';
+import { createPhotoUploader } from '../components/photo-uploader.js';
+import { createPhotoGallery } from '../components/photo-gallery.js';
 
 export class ItemDetailsView implements View {
   private container: HTMLElement | null = null;
   private cleanup: (() => void)[] = [];
   private abortController: AbortController | null = null;
   private item: Item | null = null;
+  private photoUploader: HTMLElement | null = null;
+  private photoGallery: HTMLElement | null = null;
 
   async mount(container: HTMLElement): Promise<void> {
     this.container = container;
@@ -30,6 +34,14 @@ export class ItemDetailsView implements View {
     this.cleanup = [];
     if (this.abortController) {
       this.abortController.abort();
+    }
+    if (this.photoUploader) {
+      (this.photoUploader as unknown as { destroy?: () => void }).destroy?.();
+      this.photoUploader = null;
+    }
+    if (this.photoGallery) {
+      (this.photoGallery as unknown as { destroy?: () => void }).destroy?.();
+      this.photoGallery = null;
     }
     this.container = null;
   }
@@ -154,7 +166,7 @@ export class ItemDetailsView implements View {
       className: 'item-details',
       children: [
         this.field('Brand', this.item.brand),
-        this.field('Category', '—'), // Would need category fetch
+        this.field('Category', '—'),
         this.field('Season', this.item.season?.replace('_', ' ') ?? null),
         this.field('Color', this.item.color),
         this.field('Size', this.item.size),
@@ -193,17 +205,42 @@ export class ItemDetailsView implements View {
 
     container.appendChild(quickActions);
 
-    // Photo gallery placeholder
-    container.appendChild(
-      element({
-        tag: 'section',
-        className: 'photo-gallery',
-        children: [
-          element({ tag: 'h2', children: ['Photos'] }),
-          element({ tag: 'p', children: ['Photo gallery — Stage 4'] }),
-        ],
-      }),
-    );
+    // Photo section with uploader and gallery
+    const photoSection = element({
+      tag: 'section',
+      className: 'photo-section',
+      children: [
+        element({ tag: 'h2', className: 'photo-section__title', children: ['Photos'] }),
+      ],
+    });
+
+    container.appendChild(photoSection);
+
+    // Create photo gallery
+    this.photoGallery = createPhotoGallery({
+      photos: this.item.photos,
+      itemId: this.item.id,
+      baseVersion: this.item.version,
+      onDelete: () => { /* gallery handles its own DOM */ },
+      onReorder: (version, photos) => {
+        this.item = this.item ? { ...this.item, version, photos } : null;
+      },
+    }) as HTMLElement;
+
+    photoSection.appendChild(this.photoGallery);
+
+    // Create photo uploader
+    this.photoUploader = createPhotoUploader({
+      itemId: this.item.id,
+      onUploadComplete: () => {
+        void this.loadItem();
+      },
+      onUploadError: (message) => {
+        createToast({ type: 'error', message });
+      },
+    }) as HTMLElement;
+
+    photoSection.appendChild(this.photoUploader);
 
     // Event handlers
     const editBtn = container.querySelector('[data-action="edit"]');

@@ -2,7 +2,7 @@
  * Items API endpoints.
  */
 
-import { apiGet, apiPost, apiPatch, apiDelete } from './client.js';
+import { apiGet, apiPost, apiPatch, apiDelete, apiPut } from './client.js';
 
 export type ItemStatus = 'in_use' | 'stored' | 'needs_repair';
 export type Season = 'winter' | 'spring' | 'summer' | 'autumn' | 'demi_season' | 'all_season';
@@ -116,4 +116,40 @@ export async function fetchStorageLocations(
   limit: number = 10,
 ): Promise<StorageLocationSuggestion> {
   return apiGet<StorageLocationSuggestion>('/api/v1/storage-locations', { q, limit });
+}
+
+/* ==========================================================================
+   Photo API endpoints
+   ========================================================================== */
+
+export interface PhotoOrderRequest {
+  base_version: number;
+  photos: { id: string; version: number }[];
+}
+
+export async function uploadPhoto(
+  itemId: string,
+  file: File,
+  sortOrder: number,
+): Promise<Photo> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('sort_order', String(sortOrder));
+
+  return apiPost<Photo>(`/api/v1/items/${itemId}/photos`, formData);
+}
+
+export async function deletePhoto(photoId: string, baseVersion: number): Promise<void> {
+  await apiDelete(`/api/v1/photos/${photoId}?base_version=${baseVersion}`);
+}
+
+export async function reorderPhotos(
+  itemId: string,
+  baseVersion: number,
+  orderedPhotos: { id: string; version: number }[],
+): Promise<void> {
+  await apiPut(`/api/v1/items/${itemId}/photos/order`, {
+    base_version: baseVersion,
+    photos: orderedPhotos,
+  });
 }
