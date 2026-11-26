@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+/package-lock.json
+
+# Build
+dist/
+dist-ssr/
+*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Tests
+coverage/
+
+# E2E
+playwright-report/
+test-results/
+
+# OpenAPI generated (regenerate from spec)
+src/api/generated/
+
+# OS
+.DS_Store
+Thumbs.db
