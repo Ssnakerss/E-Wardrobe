@@ -1,27 +1,26 @@
 /**
- * Categories view - placeholder for Stage 2.
+ * Categories view — delegates to category-nav component.
  */
 
-import { element } from '../dom/element.js';
+import { createCategoryNav } from '../components/category-nav.js';
 import type { View } from '../app/lifecycle.js';
 
 export class CategoriesView implements View {
+  private navView: ReturnType<typeof createCategoryNav> | null = null;
+
   mount(container: HTMLElement): void {
-    container.innerHTML = '';
-    container.appendChild(
-      element({
-        tag: 'h1',
-        attrs: { class: 'view-title' },
-        children: ['Categories'],
-      }),
-    );
-    container.appendChild(
-      element({
-        tag: 'p',
-        children: ['Categories - Stage 2'],
-      }),
-    );
+    this.navView = createCategoryNav({
+      onCategorySelect: (_categoryId: string) => {
+        // Stage 3: navigate to items filtered by category
+        console.log('Category selected:', _categoryId);
+      },
+    });
+
+    this.navView.mount(container);
   }
 
-  destroy(): void {}
+  destroy(): void {
+    this.navView?.destroy();
+    this.navView = null;
+  }
 }
