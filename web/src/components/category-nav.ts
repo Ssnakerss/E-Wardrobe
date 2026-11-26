@@ -6,8 +6,21 @@
 import { element, on, clearElement } from '../dom/element.js';
 import { createLoadingState } from './loading-state.js';
 import { errorStateFromApiError } from './error-state.js';
-import { fetchCategories, createCategory, updateCategory, deleteCategory } from '../api/categories.js';
-import { buildCategoryTree, getCategoryById, getAllDescendantIds, getAvailableParents, toggleNodeExpanded, type CategoryNode, type CategoryFlat } from '../domain/category-tree.js';
+import {
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from '../api/categories.js';
+import {
+  buildCategoryTree,
+  getCategoryById,
+  getAllDescendantIds,
+  getAvailableParents,
+  toggleNodeExpanded,
+  type CategoryNode,
+  type CategoryFlat,
+} from '../domain/category-tree.js';
 import type { View } from '../app/lifecycle.js';
 import type { ApiError } from '../api/errors.js';
 
@@ -202,9 +215,21 @@ export function createCategoryNav(opts: CategoryNavOptions = {}): View {
     }
 
     actions.push(
-      element({ tag: 'button', attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--rename', 'aria-label': 'Rename' }, children: ['✎'] }),
-      element({ tag: 'button', attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--move', 'aria-label': 'Move' }, children: ['⇄'] }),
-      element({ tag: 'button', attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--delete', 'aria-label': 'Delete' }, children: ['✕'] }),
+      element({
+        tag: 'button',
+        attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--rename', 'aria-label': 'Rename' },
+        children: ['✎'],
+      }),
+      element({
+        tag: 'button',
+        attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--move', 'aria-label': 'Move' },
+        children: ['⇄'],
+      }),
+      element({
+        tag: 'button',
+        attrs: { ...baseBtnAttrs, className: 'btn btn--icon btn--delete', 'aria-label': 'Delete' },
+        children: ['✕'],
+      }),
     );
 
     const row = element({
@@ -247,8 +272,9 @@ export function createCategoryNav(opts: CategoryNavOptions = {}): View {
     // Click on name to select
     const nameSpan = row.querySelector('.category-name');
     if (nameSpan && opts.onCategorySelect) {
+      const onSelect = opts.onCategorySelect;
       on(nameSpan as HTMLElement, 'click', () => {
-        opts.onCategorySelect!(node.id);
+        onSelect(node.id);
       });
     }
 
@@ -271,9 +297,7 @@ export function createCategoryNav(opts: CategoryNavOptions = {}): View {
         className: `category-node category-node--depth-${depth}`,
         'data-category-id': node.id,
       },
-      children: [
-        renderNodeContent(node),
-      ],
+      children: [renderNodeContent(node)],
     });
 
     if (node.children.length > 0 && node.expanded) {
@@ -328,9 +352,11 @@ export function createCategoryNav(opts: CategoryNavOptions = {}): View {
     }
 
     if (error) {
-      mainEl.appendChild(errorStateFromApiError(error, 'Retry', () => {
-        void loadCategories();
-      }));
+      mainEl.appendChild(
+        errorStateFromApiError(error, 'Retry', () => {
+          void loadCategories();
+        }),
+      );
       return;
     }
 

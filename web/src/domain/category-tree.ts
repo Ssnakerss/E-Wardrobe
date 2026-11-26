@@ -41,15 +41,20 @@ export function buildCategoryTree(categories: CategoryFlat[]): CategoryNode[] {
   const roots: CategoryNode[] = [];
 
   for (const cat of categories) {
-    const node = byId.get(cat.id)!;
+    const node = byId.get(cat.id);
+    if (!node) continue;
     const parentId = cat.parent_id;
 
     if (parentId === null || !byId.has(parentId)) {
       // No parent or parent doesn't exist — treat as root
       roots.push(node);
     } else {
-      const parent = byId.get(parentId)!;
-      parent.children.push(node);
+      const parent = byId.get(parentId);
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        roots.push(node);
+      }
     }
   }
 
@@ -72,10 +77,7 @@ function sortTree(nodes: CategoryNode[]): void {
 /**
  * Find a node by id in the tree. Returns null if not found.
  */
-export function getCategoryById(
-  tree: CategoryNode[],
-  id: string,
-): CategoryNode | null {
+export function getCategoryById(tree: CategoryNode[], id: string): CategoryNode | null {
   for (const node of tree) {
     if (node.id === id) {
       return node;
@@ -91,10 +93,7 @@ export function getCategoryById(
 /**
  * Get all descendant IDs recursively (depth-first).
  */
-export function getAllDescendantIds(
-  tree: CategoryNode[],
-  parentId: string,
-): string[] {
+export function getAllDescendantIds(tree: CategoryNode[], parentId: string): string[] {
   const node = getCategoryById(tree, parentId);
   if (!node) {
     return [];
@@ -117,10 +116,7 @@ function collectDescendantIds(node: CategoryNode, acc: string[]): void {
  * Excludes the category itself and all its descendants.
  * Also excludes already-rooted categories (parent_id === null).
  */
-export function getAvailableParents(
-  tree: CategoryNode[],
-  excludeId: string,
-): CategoryFlat[] {
+export function getAvailableParents(tree: CategoryNode[], excludeId: string): CategoryFlat[] {
   const descendants = new Set(getAllDescendantIds(tree, excludeId));
   descendants.add(excludeId);
 
@@ -142,10 +138,7 @@ export function getAvailableParents(
  * Toggle the expanded state of a node in the tree.
  * Returns a new tree (immutable update).
  */
-export function toggleNodeExpanded(
-  tree: CategoryNode[],
-  nodeId: string,
-): CategoryNode[] {
+export function toggleNodeExpanded(tree: CategoryNode[], nodeId: string): CategoryNode[] {
   return tree.map((node) => {
     if (node.id === nodeId) {
       return { ...node, expanded: !node.expanded };

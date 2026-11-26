@@ -36,9 +36,7 @@ export async function fetchCategories(): Promise<CategoryFlat[]> {
 /**
  * Create a new category.
  */
-export async function createCategory(
-  data: CreateCategoryRequest,
-): Promise<CategoryFlat> {
+export async function createCategory(data: CreateCategoryRequest): Promise<CategoryFlat> {
   return apiPost<CategoryFlat>('/api/v1/categories', data);
 }
 
@@ -58,7 +56,7 @@ export async function updateCategory(
 export async function deleteCategory(id: string, baseVersion: number): Promise<void> {
   const url = new URL(`/api/v1/categories/${id}`, config.apiBase);
   url.searchParams.append('base_version', String(baseVersion));
-  await apiFetch<void>('DELETE', url.toString());
+  await apiFetch('DELETE', url.toString());
 }
 
 /**
