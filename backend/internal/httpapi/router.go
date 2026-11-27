@@ -42,16 +42,16 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	// Auth endpoints (no auth)
-	r.Post("/v1/auth/invitations/validate", authValidateInvitation)
-	r.Post("/v1/auth/register", authRegister)
-	r.Post("/v1/auth/login", authLogin)
-	r.Post("/v1/auth/logout", authLogout)
-	r.Get("/v1/auth/csrf", authCSRF)
-	r.Get("/v1/auth/me", authMe)
+	r.Post("/auth/invitations/validate", authValidateInvitation)
+	r.Post("/auth/register", authRegister)
+	r.Post("/auth/login", authLogin)
+	r.Post("/auth/logout", authLogout)
+	r.Get("/auth/csrf", authCSRF)
+	r.Get("/auth/me", authMe)
 
 	// Recovery endpoints (no auth)
-	r.Post("/v1/auth/recovery/validate", recoveryValidate)
-	r.Post("/v1/auth/recovery/complete", recoveryComplete)
+	r.Post("/auth/recovery/validate", recoveryValidate)
+	r.Post("/auth/recovery/complete", recoveryComplete)
 
 	// Create sync service
 	syncRepo := sync.NewRepository(cfg.Pool)
@@ -64,10 +64,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		})
 
 		// Categories (placeholder)
-		r.Get("/v1/categories", listCategories)
-		r.Post("/v1/categories", createCategory)
-		r.Patch("/v1/categories/{categoryId}", updateCategory)
-		r.Delete("/v1/categories/{categoryId}", deleteCategory)
+		r.Get("/categories", listCategories)
+		r.Post("/categories", createCategory)
+		r.Patch("/categories/{categoryId}", updateCategory)
+		r.Delete("/categories/{categoryId}", deleteCategory)
 
 		// Items
 		itemHandler := newItemHandler(cfg.ItemSvc, cfg.Pool)
@@ -79,8 +79,8 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		photoHandler.registerPhotoRoutes(r)
 
 		// Sync
-		r.Post("/v1/sync/push", syncPushHandler(syncSvc))
-		r.Get("/v1/sync/pull", syncPullHandler(syncSvc))
+		r.Post("/sync/push", syncPushHandler(syncSvc))
+		r.Get("/sync/pull", syncPullHandler(syncSvc))
 	})
 
 	return r

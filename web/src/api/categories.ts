@@ -29,7 +29,7 @@ export interface UpdateCategoryRequest {
  * Fetch all categories.
  */
 export async function fetchCategories(): Promise<CategoryFlat[]> {
-  const response = await apiGet<CategoryResponse>('/api/v1/categories');
+  const response = await apiGet<CategoryResponse>('/api/categories');
   return response.categories;
 }
 
@@ -37,7 +37,7 @@ export async function fetchCategories(): Promise<CategoryFlat[]> {
  * Create a new category.
  */
 export async function createCategory(data: CreateCategoryRequest): Promise<CategoryFlat> {
-  return apiPost<CategoryFlat>('/api/v1/categories', data);
+  return apiPost<CategoryFlat>('/api/categories', data);
 }
 
 /**
@@ -47,14 +47,14 @@ export async function updateCategory(
   id: string,
   data: UpdateCategoryRequest,
 ): Promise<CategoryFlat> {
-  return apiPatch<CategoryFlat>(`/api/v1/categories/${id}`, data);
+  return apiPatch<CategoryFlat>(`/api/categories/${id}`, data);
 }
 
 /**
  * Delete a category with version-based optimistic locking.
  */
 export async function deleteCategory(id: string, baseVersion: number): Promise<void> {
-  const url = new URL(`/api/v1/categories/${id}`, config.apiBase);
+  const url = new URL(`/api/categories/${id}`, config.apiBase);
   url.searchParams.append('base_version', String(baseVersion));
   await apiFetch('DELETE', url.toString());
 }
@@ -63,7 +63,7 @@ export async function deleteCategory(id: string, baseVersion: number): Promise<v
  * Archive a category (soft delete via update).
  */
 export async function archiveCategory(id: string, baseVersion: number): Promise<CategoryFlat> {
-  return apiPatch<CategoryFlat>(`/api/v1/categories/${id}`, {
+  return apiPatch<CategoryFlat>(`/api/categories/${id}`, {
     base_version: baseVersion,
     fields: { archived_at: new Date().toISOString() },
   });

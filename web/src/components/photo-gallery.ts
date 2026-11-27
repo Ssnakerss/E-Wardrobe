@@ -290,7 +290,7 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
   function getPhotoThumbnailUrl(photo: Photo): string {
     // In production, this would be a thumbnail URL from the API
     // For now, use the full photo URL with a hint for the server
-    return `/api/v1/photos/${photo.id}/thumbnail`;
+    return `/api/photos/${photo.id}/thumbnail`;
   }
 
   // Open lightbox with full-size photo
@@ -323,7 +323,7 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
         element({
           tag: 'img',
           attrs: {
-            src: `/api/v1/photos/${photo.id}/original`,
+            src: `/api/photos/${photo.id}/original`,
             alt: `Photo ${photo.sort_order + 1}`,
             className: 'lightbox__image',
           },
@@ -378,7 +378,7 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
       if (img) {
         const photo = sorted[currentIndex];
         if (photo) {
-          (img as HTMLImageElement).src = `/api/v1/photos/${photo.id}/original`;
+          (img as HTMLImageElement).src = `/api/photos/${photo.id}/original`;
         }
       }
     }

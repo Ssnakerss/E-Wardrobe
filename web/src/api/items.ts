@@ -86,36 +86,36 @@ export interface ItemsQueryParams {
 
 export async function fetchItems(params: ItemsQueryParams = {}): Promise<ItemPage> {
   return apiGet<ItemPage>(
-    '/api/v1/items',
+    '/api/items',
     params as Record<string, string | number | boolean | null | undefined>,
   );
 }
 
 export async function fetchItem(id: string): Promise<Item> {
-  return apiGet<Item>(`/api/v1/items/${id}`);
+  return apiGet<Item>(`/api/items/${id}`);
 }
 
 export async function createItem(data: ItemInput): Promise<Item> {
-  return apiPost<Item>('/api/v1/items', data);
+  return apiPost<Item>('/api/items', data);
 }
 
 export async function updateItem(id: string, patch: ItemPatch): Promise<Item> {
-  return apiPatch<Item>(`/api/v1/items/${id}`, patch);
+  return apiPatch<Item>(`/api/items/${id}`, patch);
 }
 
 export async function archiveItem(id: string, request: ArchiveRequest): Promise<Item> {
-  return apiPost<Item>(`/api/v1/items/${id}/archive`, request);
+  return apiPost<Item>(`/api/items/${id}/archive`, request);
 }
 
 export async function deleteItem(id: string, baseVersion: number): Promise<void> {
-  await apiDelete(`/api/v1/items/${id}?base_version=${baseVersion}`);
+  await apiDelete(`/api/items/${id}?base_version=${baseVersion}`);
 }
 
 export async function fetchStorageLocations(
   q: string,
   limit: number = 10,
 ): Promise<StorageLocationSuggestion> {
-  return apiGet<StorageLocationSuggestion>('/api/v1/storage-locations', { q, limit });
+  return apiGet<StorageLocationSuggestion>('/api/storage-locations', { q, limit });
 }
 
 /* ==========================================================================
@@ -132,11 +132,11 @@ export async function uploadPhoto(itemId: string, file: File, sortOrder: number)
   formData.append('file', file);
   formData.append('sort_order', String(sortOrder));
 
-  return apiPost<Photo>(`/api/v1/items/${itemId}/photos`, formData);
+  return apiPost<Photo>(`/api/items/${itemId}/photos`, formData);
 }
 
 export async function deletePhoto(photoId: string, baseVersion: number): Promise<void> {
-  await apiDelete(`/api/v1/photos/${photoId}?base_version=${baseVersion}`);
+  await apiDelete(`/api/photos/${photoId}?base_version=${baseVersion}`);
 }
 
 export async function reorderPhotos(
@@ -144,7 +144,7 @@ export async function reorderPhotos(
   baseVersion: number,
   orderedPhotos: { id: string; version: number }[],
 ): Promise<void> {
-  await apiPut(`/api/v1/items/${itemId}/photos/order`, {
+  await apiPut(`/api/items/${itemId}/photos/order`, {
     base_version: baseVersion,
     photos: orderedPhotos,
   });

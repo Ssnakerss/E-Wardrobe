@@ -31,7 +31,7 @@ export function createItemCard(props: ItemCardProps): HTMLElement {
             element({
               tag: 'img',
               attrs: {
-                src: `/api/v1/photos/${photo.id}/content?variant=thumbnail`,
+                src: `/api/photos/${photo.id}/content?variant=thumbnail`,
                 alt: props.item.name,
                 loading: 'lazy',
               },

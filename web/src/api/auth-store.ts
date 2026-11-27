@@ -42,7 +42,7 @@ function setState(newState: AuthState): void {
 
 export async function bootstrapAuth(): Promise<AuthState> {
   try {
-    const resp = await fetch('/api/v1/auth/me', {
+    const resp = await fetch('/api/auth/me', {
       credentials: 'same-origin',
     });
 

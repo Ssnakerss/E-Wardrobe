@@ -48,7 +48,7 @@ export interface RecoveryCompleteRequest {
  * Validate an invitation token.
  */
 export async function validateInvitation(token: string): Promise<InvitationValidateResponse> {
-  return apiPost<InvitationValidateResponse>('/api/v1/auth/invitations/validate', {
+  return apiPost<InvitationValidateResponse>('/api/auth/invitations/validate', {
     invitation_token: token,
   });
 }
@@ -57,28 +57,28 @@ export async function validateInvitation(token: string): Promise<InvitationValid
  * Register with an invitation token.
  */
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/api/v1/auth/register', data);
+  return apiPost<AuthResponse>('/api/auth/register', data);
 }
 
 /**
  * Login with email and password.
  */
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/api/v1/auth/login', data);
+  return apiPost<AuthResponse>('/api/auth/login', data);
 }
 
 /**
  * Logout — revokes the session.
  */
 export async function logout(): Promise<void> {
-  await apiDelete('/api/v1/auth/logout');
+  await apiDelete('/api/auth/logout');
 }
 
 /**
  * Validate a recovery token.
  */
 export async function validateRecovery(token: string): Promise<RecoveryValidateResponse> {
-  return apiPost<RecoveryValidateResponse>('/api/v1/auth/recovery/validate', {
+  return apiPost<RecoveryValidateResponse>('/api/auth/recovery/validate', {
     recovery_token: token,
   });
 }
@@ -87,5 +87,5 @@ export async function validateRecovery(token: string): Promise<RecoveryValidateR
  * Complete password reset with a recovery token.
  */
 export async function completeRecovery(data: RecoveryCompleteRequest): Promise<void> {
-  await apiPost('/api/v1/auth/recovery/complete', data);
+  await apiPost('/api/auth/recovery/complete', data);
 }

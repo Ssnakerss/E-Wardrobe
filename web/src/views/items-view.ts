@@ -94,7 +94,7 @@ export class ItemsView implements View {
 
   private async loadCategories(): Promise<void> {
     try {
-      const resp = await fetch('/api/v1/categories', { credentials: 'same-origin' });
+      const resp = await fetch('/api/categories', { credentials: 'same-origin' });
       if (!resp.ok) return;
       const data = await resp.json();
       if (data && Array.isArray(data.categories)) {

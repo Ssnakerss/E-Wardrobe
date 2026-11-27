@@ -28,7 +28,7 @@ export async function getCsrfToken(): Promise<string | null> {
 
   state.fetching = true;
   try {
-    const resp = await fetch('/api/v1/auth/csrf', {
+    const resp = await fetch('/api/auth/csrf', {
       method: 'GET',
       credentials: 'same-origin',
     });
