@@ -31,7 +31,7 @@ npm ci
 | `npm run check`            | Run typecheck + lint + format + test                    |
 
 ## Project Structure
- 
+
 ```
 web/
 ├── src/

@@ -23,6 +23,16 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// securityHeaders middleware adds security-related HTTP headers to every response.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -96,27 +106,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-
-	// Health endpoints
-	r.Get("/health/live", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	r.Get("/health/ready", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		defer cancel()
-
-		if err := pool.Ready(ctx); err != nil {
-			slog.Error("ready check failed", "error", err)
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("Not Ready"))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Ready"))
-	})
+	r.Use(securityHeaders)
 
 	// API router
 	apiRouter := httpapi.NewRouter(routerCfg)

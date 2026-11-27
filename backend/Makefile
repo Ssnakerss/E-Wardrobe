@@ -1,11 +1,16 @@
-.PHONY: build run migrate-up migrate-down test test-race sqlc-gen lint docker-up docker-down
+.PHONY: build run migrate-up migrate-down test test-race sqlc-gen lint docker-up docker-down web-copy
 
 MODULE  := github.com/Ssnakerss/E-Wardrobe
 SERVER  := ./cmd/server
 CLI     := ./cmd/wardrobe
 MIGRATIONS := ../../migrations
 
-build:
+web-copy:
+	cd ../web && npm run build
+	rm -rf internal/webui/dist/*
+	cp -r ../web/dist/* internal/webui/dist/
+
+build: web-copy
 	go build -o bin/server $(SERVER)
 	go build -o bin/wardrobe $(CLI)
 
