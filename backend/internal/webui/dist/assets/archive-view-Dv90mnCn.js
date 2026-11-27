@@ -1,0 +1,1 @@
+import{e as i}from"./index-DkwMJ4fF.js";class h{mount(e){e.innerHTML="",e.appendChild(i({tag:"h1",attrs:{class:"view-title"},children:["Archive"]})),e.appendChild(i({tag:"p",children:["Archive - Stage 3"]}))}destroy(){}}export{h as ArchiveView};
