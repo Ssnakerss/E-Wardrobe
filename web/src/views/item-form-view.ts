@@ -88,6 +88,7 @@ export class ItemFormView implements View {
   private categories: { id: string; name: string }[] = [];
   private storageSuggestions: string[] = [];
   private storageDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private _loadError: string | null = null;
 
   async mount(container: HTMLElement): Promise<void> {
     this.container = container;
@@ -151,7 +152,8 @@ export class ItemFormView implements View {
     try {
       this.item = await fetchItem(itemId);
     } catch {
-      // Error handled by render
+      this.item = null;
+      this._loadError = 'Item not found';
     }
   }
 
@@ -160,6 +162,34 @@ export class ItemFormView implements View {
     if (!container) return;
 
     container.innerHTML = '';
+
+    // Handle load error (item not found in edit mode)
+    if (this._loadError) {
+      container.appendChild(
+        element({
+          tag: 'div',
+          className: 'error-state',
+          children: [
+            element({
+              tag: 'h2',
+              className: 'error-state__title',
+              children: ['Item not found'],
+            }),
+            element({
+              tag: 'p',
+              className: 'error-state__message',
+              children: [this._loadError],
+            }),
+            element({
+              tag: 'a',
+              attrs: { href: '/items', className: 'btn btn--primary' },
+              children: ['Back to items'],
+            }),
+          ],
+        }),
+      );
+      return;
+    }
 
     container.appendChild(
       element({

@@ -10,8 +10,10 @@ import { createItemCard } from '../components/item-card.js';
 import { createItemFilters } from '../components/item-filters.js';
 import { createLoadingState } from '../components/loading-state.js';
 import { createEmptyState } from '../components/empty-state.js';
+import { createErrorState } from '../components/error-state.js';
 import { createConfirmDialog } from '../components/confirm-dialog.js';
 import { serializeQueryParams, deserializeQueryParams } from '../domain/item.js';
+import { normalizeApiError } from '../api/errors.js';
 
 type ViewMode = 'cards' | 'table';
 
@@ -25,6 +27,7 @@ export class ItemsView implements View {
   private categories: { id: string; name: string }[] = [];
   private viewMode: ViewMode = this.loadViewMode();
   private isLoading = false;
+  private lastError: Error | null = null;
 
   async mount(container: HTMLElement): Promise<void> {
     this.container = container;
@@ -120,8 +123,10 @@ export class ItemsView implements View {
       const data = await fetchItems(this.queryParams);
       this.items = data.items;
       this.nextCursor = data.next_cursor;
+      this.lastError = null;
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
+      this.lastError = error instanceof Error ? error : new Error(String(error));
     } finally {
       this.isLoading = false;
     }
@@ -209,6 +214,16 @@ export class ItemsView implements View {
 
     if (this.isLoading) {
       mainContent.appendChild(createLoadingState('Loading items...'));
+    } else if (this.lastError) {
+      const apiError = normalizeApiError(null, null, true);
+      mainContent.appendChild(
+        createErrorState({
+          title: apiError.httpStatus === 0 ? 'Connection error' : 'Error',
+          message: this.lastError.message || 'Failed to load items',
+          retryLabel: 'Retry',
+          onRetry: () => void this.loadItems(),
+        }),
+      );
     } else if (this.items.length === 0) {
       mainContent.appendChild(
         createEmptyState({

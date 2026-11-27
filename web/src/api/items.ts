@@ -127,11 +127,7 @@ export interface PhotoOrderRequest {
   photos: { id: string; version: number }[];
 }
 
-export async function uploadPhoto(
-  itemId: string,
-  file: File,
-  sortOrder: number,
-): Promise<Photo> {
+export async function uploadPhoto(itemId: string, file: File, sortOrder: number): Promise<Photo> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('sort_order', String(sortOrder));

@@ -89,9 +89,25 @@ export class ItemDetailsView implements View {
     container.innerHTML = '';
     container.appendChild(
       element({
-        tag: 'h1',
-        attrs: { class: 'view-title' },
-        children: ['Item not found'],
+        tag: 'div',
+        className: 'empty-state',
+        children: [
+          element({
+            tag: 'h2',
+            className: 'empty-state__title',
+            children: ['Item not found'],
+          }),
+          element({
+            tag: 'p',
+            className: 'empty-state__description',
+            children: ['The item you are looking for does not exist or has been deleted.'],
+          }),
+          element({
+            tag: 'a',
+            attrs: { href: '/items', className: 'btn btn--primary' },
+            children: ['Back to items'],
+          }),
+        ],
       }),
     );
   }
@@ -101,16 +117,53 @@ export class ItemDetailsView implements View {
     if (!container) return;
     container.innerHTML = '';
     const message = error instanceof Error ? error.message : 'Failed to load item';
+    const isNotFound =
+      message.toLowerCase().includes('not found') || message.toLowerCase().includes('404');
+
     container.appendChild(
       element({
         tag: 'div',
         className: 'error-state',
         children: [
-          element({ tag: 'h2', children: ['Error'] }),
-          element({ tag: 'p', children: [message] }),
+          element({
+            tag: 'h2',
+            className: 'error-state__title',
+            children: [isNotFound ? 'Item not found' : 'Error'],
+          }),
+          element({
+            tag: 'p',
+            className: 'error-state__message',
+            children: [message],
+          }),
+          element({
+            tag: 'div',
+            className: 'form-actions',
+            children: [
+              element({
+                tag: 'button',
+                attrs: {
+                  type: 'button',
+                  className: 'btn btn--primary',
+                  'data-action': 'retry',
+                },
+                children: ['Retry'],
+              }),
+              element({
+                tag: 'a',
+                attrs: { href: '/items', className: 'btn' },
+                children: ['Back to items'],
+              }),
+            ],
+          }),
         ],
       }),
     );
+
+    // Retry handler
+    const retryBtn = container.querySelector('[data-action="retry"]');
+    if (retryBtn) {
+      this.cleanup.push(on(retryBtn, 'click', () => void this.loadItem()));
+    }
   }
 
   private render(): void {
@@ -209,9 +262,7 @@ export class ItemDetailsView implements View {
     const photoSection = element({
       tag: 'section',
       className: 'photo-section',
-      children: [
-        element({ tag: 'h2', className: 'photo-section__title', children: ['Photos'] }),
-      ],
+      children: [element({ tag: 'h2', className: 'photo-section__title', children: ['Photos'] })],
     });
 
     container.appendChild(photoSection);
@@ -221,7 +272,9 @@ export class ItemDetailsView implements View {
       photos: this.item.photos,
       itemId: this.item.id,
       baseVersion: this.item.version,
-      onDelete: () => { /* gallery handles its own DOM */ },
+      onDelete: () => {
+        /* gallery handles its own DOM */
+      },
       onReorder: (version, photos) => {
         this.item = this.item ? { ...this.item, version, photos } : null;
       },

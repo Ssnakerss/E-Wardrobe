@@ -17,6 +17,7 @@ import (
 	"github.com/Ssnakerss/E-Wardrobe/internal/photos"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/database"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/storage"
+	"github.com/Ssnakerss/E-Wardrobe/internal/webui"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -113,6 +114,9 @@ func main() {
 	// API router
 	apiRouter := httpapi.NewRouter(routerCfg)
 	r.Mount("/", apiRouter)
+
+	// Static web files (SPA fallback) — must be after API routes
+	r.Handle("/*", webui.StaticHandler())
 
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddr,

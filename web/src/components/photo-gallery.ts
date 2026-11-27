@@ -165,42 +165,48 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
     let selectedPhotoId: string | null = null;
 
     // Click on card selects it for reorder
-    cleanupFns.push(on(gridEl, 'click', (e: Event) => {
-      const card = (e.target as HTMLElement).closest('.photo-gallery__card');
-      if (!card) return;
+    cleanupFns.push(
+      on(gridEl, 'click', (e: Event) => {
+        const card = (e.target as HTMLElement).closest('.photo-gallery__card');
+        if (!card) return;
 
-      // Deselect previous
-      const prevSelected = gridEl.querySelector('.photo-gallery__card--selected');
-      if (prevSelected) {
-        prevSelected.classList.remove('photo-gallery__card--selected');
-      }
+        // Deselect previous
+        const prevSelected = gridEl.querySelector('.photo-gallery__card--selected');
+        if (prevSelected) {
+          prevSelected.classList.remove('photo-gallery__card--selected');
+        }
 
-      const photoId = card.getAttribute('data-photo-id');
-      if (photoId) {
-        card.classList.add('photo-gallery__card--selected');
-        selectedPhotoId = photoId;
-        updateReorderButtons(selectedPhotoId);
-      }
-    }));
+        const photoId = card.getAttribute('data-photo-id');
+        if (photoId) {
+          card.classList.add('photo-gallery__card--selected');
+          selectedPhotoId = photoId;
+          updateReorderButtons(selectedPhotoId);
+        }
+      }),
+    );
 
     // Reorder left
     const leftBtn = toolbar.querySelector('[data-action="reorder-left"]');
     if (leftBtn) {
-      cleanupFns.push(on(leftBtn, 'click', async () => {
-        if (!selectedPhotoId) return;
-        await handleReorder(selectedPhotoId, -1);
-        updateReorderButtons(selectedPhotoId);
-      }));
+      cleanupFns.push(
+        on(leftBtn, 'click', async () => {
+          if (!selectedPhotoId) return;
+          await handleReorder(selectedPhotoId, -1);
+          updateReorderButtons(selectedPhotoId);
+        }),
+      );
     }
 
     // Reorder right
     const rightBtn = toolbar.querySelector('[data-action="reorder-right"]');
     if (rightBtn) {
-      cleanupFns.push(on(rightBtn, 'click', async () => {
-        if (!selectedPhotoId) return;
-        await handleReorder(selectedPhotoId, 1);
-        updateReorderButtons(selectedPhotoId);
-      }));
+      cleanupFns.push(
+        on(rightBtn, 'click', async () => {
+          if (!selectedPhotoId) return;
+          await handleReorder(selectedPhotoId, 1);
+          updateReorderButtons(selectedPhotoId);
+        }),
+      );
     }
 
     function updateReorderButtons(photoId: string): void {
@@ -381,9 +387,11 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
     if (closeBtn) {
       cleanupFns.push(on(closeBtn, 'click', closeLightbox));
     }
-    cleanupFns.push(on(overlay, 'click', (e: Event) => {
-      if ((e.target as HTMLElement) === overlay) closeLightbox();
-    }));
+    cleanupFns.push(
+      on(overlay, 'click', (e: Event) => {
+        if ((e.target as HTMLElement) === overlay) closeLightbox();
+      }),
+    );
 
     const prevBtn = dialog.querySelector('.lightbox__prev');
     if (prevBtn) {
@@ -396,20 +404,21 @@ export function createPhotoGallery(opts: PhotoGalleryOptions): HTMLElement {
     }
 
     // Keyboard navigation
-    cleanupFns.push(on(document, 'keydown', ((e: Event) => {
-      const ke = e as KeyboardEvent;
-      if (ke.key === 'Escape') closeLightbox();
-      if (ke.key === 'ArrowLeft') navigate(-1);
-      if (ke.key === 'ArrowRight') navigate(1);
-    }) as (e: Event) => void));
+    cleanupFns.push(
+      on(document, 'keydown', ((e: Event) => {
+        const ke = e as KeyboardEvent;
+        if (ke.key === 'Escape') closeLightbox();
+        if (ke.key === 'ArrowLeft') navigate(-1);
+        if (ke.key === 'ArrowRight') navigate(1);
+      }) as (e: Event) => void),
+    );
   }
 
   // Public API to update photos
   function setPhotos(newPhotos: Photo[]): void {
     currentPhotos = [...newPhotos];
-    currentVersion = newPhotos.length > 0
-      ? Math.max(...newPhotos.map((p) => p.version))
-      : currentVersion;
+    currentVersion =
+      newPhotos.length > 0 ? Math.max(...newPhotos.map((p) => p.version)) : currentVersion;
     render();
   }
 

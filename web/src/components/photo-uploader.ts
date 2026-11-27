@@ -42,8 +42,16 @@ export function createPhotoUploader(opts: PhotoUploaderOptions): HTMLElement {
               multiple: 'multiple',
             },
           }),
-          element({ tag: 'p', className: 'photo-uploader__hint', children: ['Drop JPEG files here or click to browse'] }),
-          element({ tag: 'p', className: 'photo-uploader__hint', children: ['Max 12 MiB per file'] }),
+          element({
+            tag: 'p',
+            className: 'photo-uploader__hint',
+            children: ['Drop JPEG files here or click to browse'],
+          }),
+          element({
+            tag: 'p',
+            className: 'photo-uploader__hint',
+            children: ['Max 12 MiB per file'],
+          }),
         ],
       }),
       element({ tag: 'div', className: 'photo-uploader__queue' }),
@@ -137,17 +145,19 @@ export function createPhotoUploader(opts: PhotoUploaderOptions): HTMLElement {
       });
 
       item.appendChild(retryBtn);
-      cleanupFns.push(on(retryBtn, 'click', async () => {
-        try {
-          await q.retry(uploadFile.id, itemId, async (_fileId, file, sortOrder) => {
-            const response = await uploadPhoto(itemId, file, sortOrder);
-            return response as unknown as Response;
-          });
-          renderQueue();
-        } catch {
-          onUploadError('Retry failed');
-        }
-      }));
+      cleanupFns.push(
+        on(retryBtn, 'click', async () => {
+          try {
+            await q.retry(uploadFile.id, itemId, async (_fileId, file, sortOrder) => {
+              const response = await uploadPhoto(itemId, file, sortOrder);
+              return response as unknown as Response;
+            });
+            renderQueue();
+          } catch {
+            onUploadError('Retry failed');
+          }
+        }),
+      );
     }
 
     // Remove completed items after a delay
@@ -165,23 +175,31 @@ export function createPhotoUploader(opts: PhotoUploaderOptions): HTMLElement {
 
   function formatStatus(status: string): string {
     switch (status) {
-      case 'queued': return 'Queued';
-      case 'uploading': return 'Uploading...';
-      case 'processing': return 'Processing...';
-      case 'ready': return 'Done';
-      case 'failed': return 'Failed';
-      default: return status;
+      case 'queued':
+        return 'Queued';
+      case 'uploading':
+        return 'Uploading...';
+      case 'processing':
+        return 'Processing...';
+      case 'ready':
+        return 'Done';
+      case 'failed':
+        return 'Failed';
+      default:
+        return status;
     }
   }
 
   // Event listeners
-  cleanupFns.push(on(fileInput, 'change', (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    if (target.files) {
-      handleFiles(target.files);
-      target.value = '';
-    }
-  }));
+  cleanupFns.push(
+    on(fileInput, 'change', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files) {
+        handleFiles(target.files);
+        target.value = '';
+      }
+    }),
+  );
 
   // Drag and drop
   function preventDefault(e: Event): void {
@@ -192,27 +210,33 @@ export function createPhotoUploader(opts: PhotoUploaderOptions): HTMLElement {
   cleanupFns.push(on(dropzone, 'dragover', preventDefault));
   cleanupFns.push(on(dropzone, 'dragenter', preventDefault));
 
-  cleanupFns.push(on(dropzone, 'drop', (e: Event) => {
-    preventDefault(e);
-    const dragEvent = e as DragEvent;
-    if (dragEvent.dataTransfer?.files) {
-      handleFiles(dragEvent.dataTransfer.files);
-    }
-  }));
+  cleanupFns.push(
+    on(dropzone, 'drop', (e: Event) => {
+      preventDefault(e);
+      const dragEvent = e as DragEvent;
+      if (dragEvent.dataTransfer?.files) {
+        handleFiles(dragEvent.dataTransfer.files);
+      }
+    }),
+  );
 
   // Click on dropzone triggers file input
-  cleanupFns.push(on(dropzone, 'click', () => {
-    fileInput.click();
-  }));
+  cleanupFns.push(
+    on(dropzone, 'click', () => {
+      fileInput.click();
+    }),
+  );
 
   // Keyboard accessibility
-  cleanupFns.push(on(dropzone, 'keydown', ((e: Event) => {
-    const ke = e as KeyboardEvent;
-    if (ke.key === 'Enter' || ke.key === ' ') {
-      ke.preventDefault();
-      fileInput.click();
-    }
-  }) as (e: Event) => void));
+  cleanupFns.push(
+    on(dropzone, 'keydown', ((e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        fileInput.click();
+      }
+    }) as (e: Event) => void),
+  );
 
   // Destroy
   return {
