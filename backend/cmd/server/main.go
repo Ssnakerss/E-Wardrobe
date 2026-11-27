@@ -16,6 +16,7 @@ import (
 	"github.com/Ssnakerss/E-Wardrobe/internal/items"
 	"github.com/Ssnakerss/E-Wardrobe/internal/photos"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/database"
+	"github.com/Ssnakerss/E-Wardrobe/internal/platform/migration"
 	"github.com/Ssnakerss/E-Wardrobe/internal/platform/storage"
 	"github.com/Ssnakerss/E-Wardrobe/internal/webui"
 	"github.com/go-chi/chi/v5"
@@ -51,6 +52,12 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	// Apply embedded migrations
+	if err := migration.Run(context.Background(), pool, logger); err != nil {
+		slog.Error("failed to run migrations", "error", err)
+		os.Exit(1)
+	}
 
 	// Initialize storage
 	store, err := storage.NewLocalPhotoStorage(cfg.PhotoStorageDir)
