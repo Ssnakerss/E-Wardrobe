@@ -108,9 +108,27 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(securityHeaders)
 
+	// Health endpoints (no auth)
+	r.Get("/health/live", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	r.Get("/health/ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		if err := pool.Ready(ctx); err != nil {
+			slog.Error("ready check failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("Not Ready"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Ready"))
+	})
+
 	// API router
 	apiRouter := httpapi.NewRouter(routerCfg)
-	r.Mount("/", apiRouter)
+	r.Mount("/api", apiRouter)
 
 	// Static web files (SPA fallback) — must be after API routes
 	r.Handle("/*", webui.StaticHandler())

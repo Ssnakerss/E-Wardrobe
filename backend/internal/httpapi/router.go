@@ -41,21 +41,17 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// Health endpoints (no auth)
-	r.Get("/health/live", healthLive)
-	r.Get("/health/ready", healthReady)
-
 	// Auth endpoints (no auth)
-	r.Post("/api/v1/auth/invitations/validate", authValidateInvitation)
-	r.Post("/api/v1/auth/register", authRegister)
-	r.Post("/api/v1/auth/login", authLogin)
-	r.Post("/api/v1/auth/logout", authLogout)
-	r.Get("/api/v1/auth/csrf", authCSRF)
-	r.Get("/api/v1/auth/me", authMe)
+	r.Post("/v1/auth/invitations/validate", authValidateInvitation)
+	r.Post("/v1/auth/register", authRegister)
+	r.Post("/v1/auth/login", authLogin)
+	r.Post("/v1/auth/logout", authLogout)
+	r.Get("/v1/auth/csrf", authCSRF)
+	r.Get("/v1/auth/me", authMe)
 
 	// Recovery endpoints (no auth)
-	r.Post("/api/v1/auth/recovery/validate", recoveryValidate)
-	r.Post("/api/v1/auth/recovery/complete", recoveryComplete)
+	r.Post("/v1/auth/recovery/validate", recoveryValidate)
+	r.Post("/v1/auth/recovery/complete", recoveryComplete)
 
 	// Create sync service
 	syncRepo := sync.NewRepository(cfg.Pool)
@@ -68,10 +64,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		})
 
 		// Categories (placeholder)
-		r.Get("/api/v1/categories", listCategories)
-		r.Post("/api/v1/categories", createCategory)
-		r.Patch("/api/v1/categories/{categoryId}", updateCategory)
-		r.Delete("/api/v1/categories/{categoryId}", deleteCategory)
+		r.Get("/v1/categories", listCategories)
+		r.Post("/v1/categories", createCategory)
+		r.Patch("/v1/categories/{categoryId}", updateCategory)
+		r.Delete("/v1/categories/{categoryId}", deleteCategory)
 
 		// Items
 		itemHandler := newItemHandler(cfg.ItemSvc, cfg.Pool)
@@ -83,24 +79,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		photoHandler.registerPhotoRoutes(r)
 
 		// Sync
-		r.Post("/api/v1/sync/push", syncPushHandler(syncSvc))
-		r.Get("/api/v1/sync/pull", syncPullHandler(syncSvc))
+		r.Post("/v1/sync/push", syncPushHandler(syncSvc))
+		r.Get("/v1/sync/pull", syncPullHandler(syncSvc))
 	})
 
 	return r
 }
 
 // Placeholder handlers — to be replaced with actual implementations.
-
-func healthLive(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-}
-
-func healthReady(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Ready"))
-}
 
 func authValidateInvitation(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, map[string]any{"message": "placeholder"})
