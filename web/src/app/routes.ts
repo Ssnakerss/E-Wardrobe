@@ -10,6 +10,13 @@ import type { View } from './lifecycle.js';
  * Views are loaded lazily to avoid loading unused code.
  */
 export function registerRoutes(): void {
+  // Root — redirect to items (if authenticated) or login (if not)
+  addRoute(
+    '/',
+    () => true,
+    () => import('../views/redirect-view.js').then((m) => new m.RedirectView('/items') as View),
+  );
+
   // Public routes
   addRoute(
     '/login',
