@@ -1,0 +1,1 @@
+import{e as t}from"./index-DoeGzrvc.js";class d{mount(e){e.innerHTML="",e.appendChild(t({tag:"h1",attrs:{class:"view-title"},children:["Page Not Found"]})),e.appendChild(t({tag:"p",children:["The page you are looking for does not exist."]})),e.appendChild(t({tag:"a",attrs:{href:"/",class:"btn btn--primary"},children:["Go Home"]}))}destroy(){}}export{d as NotFoundView};

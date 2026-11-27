@@ -23,8 +23,7 @@ func StaticHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Don't intercept API or health routes
 		if strings.HasPrefix(r.URL.Path, "/api/") ||
-			strings.HasPrefix(r.URL.Path, "/health/") ||
-			strings.HasPrefix(r.URL.Path, "/sw.") {
+			strings.HasPrefix(r.URL.Path, "/health/") {
 			http.NotFound(w, r)
 			return
 		}

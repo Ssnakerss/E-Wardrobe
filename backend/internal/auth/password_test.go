@@ -21,14 +21,15 @@ func TestHashPassword_DifferentPasswords(t *testing.T) {
 }
 
 func TestHashPassword_SamePasswordDifferentHashes(t *testing.T) {
-	h1, err := HashPassword("same-password")
+	h1, err := HashPassword("12qwasZX!@")
 	require.NoError(t, err)
 
-	h2, err := HashPassword("same-password")
+	h2, err := HashPassword("12qwasZX!@")
 	require.NoError(t, err)
 
 	// Hashes should differ due to random salt
 	require.NotEqual(t, h1, h2)
+	t.Log(h1)
 }
 
 func TestHashPassword_VerifyCorrectPassword(t *testing.T) {
